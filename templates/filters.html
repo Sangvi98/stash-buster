@@ -1,0 +1,87 @@
+{# Reusable filter bar – include in any suggestions page.
+   Expects: filters (dict), form_action (url string),
+   optional: profile (dict with top_categories), show_craft (bool) #}
+
+<form method="GET" action="{{ form_action }}" class="filter-bar">
+
+    {# Search box #}
+    <div class="filter-group filter-search">
+        <label for="query">Search</label>
+        <input type="text" id="query" name="query"
+               value="{{ filters.query or '' }}"
+               placeholder="e.g. raglan, cables, beginner...">
+    </div>
+
+    {# Availability #}
+    <div class="filter-group">
+        <label for="availability">Price</label>
+        <select id="availability" name="availability">
+            <option value="">Any</option>
+            <option value="free" {{ 'selected' if filters.availability == 'free' }}>Free only</option>
+            <option value="online" {{ 'selected' if filters.availability == 'online' }}>Free + online</option>
+        </select>
+    </div>
+
+    {# Difficulty range #}
+    <div class="filter-group">
+        <label for="diff_min">Difficulty</label>
+        <div class="range-inputs">
+            <select id="diff_min" name="diff_min">
+                <option value="">Min</option>
+                {% for d in range(1, 11) %}
+                <option value="{{ d }}" {{ 'selected' if filters.diff_min == d|string }}>{{ d }}</option>
+                {% endfor %}
+            </select>
+            <span class="range-sep">–</span>
+            <select id="diff_max" name="diff_max">
+                <option value="">Max</option>
+                {% for d in range(1, 11) %}
+                <option value="{{ d }}" {{ 'selected' if filters.diff_max == d|string }}>{{ d }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    {# Sort order #}
+    <div class="filter-group">
+        <label for="sort">Sort by</label>
+        <select id="sort" name="sort">
+            <option value="best" {{ 'selected' if filters.sort == 'best' or not filters.sort }}>Best match</option>
+            <option value="popularity" {{ 'selected' if filters.sort == 'popularity' }}>Most popular</option>
+            <option value="rating" {{ 'selected' if filters.sort == 'rating' }}>Highest rated</option>
+            <option value="date" {{ 'selected' if filters.sort == 'date' }}>Newest</option>
+            <option value="difficulty" {{ 'selected' if filters.sort == 'difficulty' }}>Easiest first</option>
+        </select>
+    </div>
+
+    {# Craft type #}
+    {% if show_craft is not defined or show_craft %}
+    <div class="filter-group">
+        <label for="craft">Craft</label>
+        <select id="craft" name="craft">
+            <option value="">Any</option>
+            <option value="knitting" {{ 'selected' if filters.craft == 'knitting' }}>Knitting</option>
+            <option value="crochet" {{ 'selected' if filters.craft == 'crochet' }}>Crochet</option>
+        </select>
+    </div>
+    {% endif %}
+
+    {# Category filter – shown when profile categories are available #}
+    {% if profile and profile.top_categories %}
+    <div class="filter-group">
+        <label for="pc">Category</label>
+        <select id="pc" name="pc">
+            <option value="">All categories</option>
+            {% for pc, name, count in profile.top_categories %}
+            <option value="{{ pc }}" {{ 'selected' if filters.pc == pc }}>{{ name }} ({{ count }})</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    {# Buttons #}
+    <div class="filter-actions">
+        <button type="submit" class="btn-secondary">Apply Filters</button>
+        <a href="{{ form_action }}" class="btn-clear">Clear</a>
+    </div>
+</form>

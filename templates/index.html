@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Stash Buster – Use Up Your Yarn!{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Stash Buster</h1>
+    <p class="subtitle">Connect your Ravelry account to get pattern suggestions that help you use up the yarn in your stash.</p>
+
+    <div class="features">
+        <div class="feature-card">
+            <h3>Browse Your Stash</h3>
+            <p>See all the yarns you have on hand, organized and ready to match.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Match Patterns to Yarn</h3>
+            <p>Get pattern suggestions filtered by weight, yardage, and craft type for each yarn in your stash.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Inspired by Your Projects</h3>
+            <p>Discover new patterns based on the types of projects you've already made and loved.</p>
+        </div>
+    </div>
+
+    <a href="{{ url_for('login') }}" class="btn-primary">Connect with Ravelry</a>
+</section>
+{% endblock %}

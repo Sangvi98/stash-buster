@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Project-Based Ideas – Stash Buster{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>Patterns Based on Your Projects</h1>
+
+    {% if profile %}
+    <div class="profile-summary">
+        {% if profile.craft %}
+            <span class="tag">{{ profile.craft | title }}</span>
+        {% endif %}
+        {% if profile.avg_difficulty %}
+            <span class="tag difficulty">Your avg difficulty: {{ "%.1f" | format(profile.avg_difficulty) }}/10</span>
+        {% endif %}
+        {% if profile.difficulty_range %}
+            <span class="detail">Range: {{ "%.1f" | format(profile.difficulty_range[0]) }} – {{ "%.1f" | format(profile.difficulty_range[1]) }}</span>
+        {% endif %}
+    </div>
+    <p class="section-subtitle">
+        We analyzed your project history and found your favorite categories.
+        Here are top-rated patterns in each, matched to your skill level.
+    </p>
+    {% endif %}
+</section>
+
+{# ── Filter bar ── #}
+{% set form_action = url_for('suggestions_from_projects') %}
+{% include "filters.html" %}
+
+{% if category_groups %}
+    {% for group in category_groups %}
+    <section class="category-group">
+        <h2 class="category-heading">
+            {{ group.category }}
+            <span class="category-count">{{ group.count }} project{{ 's' if group.count != 1 }} made</span>
+        </h2>
+
+        {% if group.patterns %}
+        <div class="pattern-grid">
+            {% for pattern in group.patterns %}
+            <a href="https://www.ravelry.com/patterns/library/{{ pattern.get('permalink', '') }}"
+               target="_blank" class="pattern-card">
+                {% set photo = pattern.get('first_photo') or {} %}
+                {% if photo.get('medium_url') %}
+                    <img src="{{ photo['medium_url'] }}" alt="{{ pattern.get('name', 'Pattern') }}" class="pattern-photo">
+                {% else %}
+                    <div class="pattern-photo placeholder">No photo</div>
+                {% endif %}
+                <div class="pattern-info">
+                    <h3>{{ pattern.get('name', 'Unnamed Pattern') }}</h3>
+                    {% if pattern.get('designer', {}).get('name') %}
+                        <p class="designer">by {{ pattern['designer']['name'] }}</p>
+                    {% endif %}
+                    <div class="pattern-meta">
+                        {% if pattern.get('free') %}
+                            <span class="tag free">Free</span>
+                        {% endif %}
+                        {% if pattern.get('yardage') %}
+                            <span class="detail">{{ pattern['yardage'] }} yds</span>
+                        {% endif %}
+                        {% if pattern.get('difficulty_average') %}
+                            <span class="detail">Diff: {{ "%.1f" | format(pattern['difficulty_average']) }}</span>
+                        {% endif %}
+                        {% if pattern.get('rating_average') %}
+                            <span class="detail">{{ "%.1f" | format(pattern['rating_average']) }}/5</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-note">No patterns found for this category.</p>
+        {% endif %}
+    </section>
+    {% endfor %}
+    {# Pagination – applies to all category groups at once #}
+    {% set has_more = category_groups | selectattr('patterns') | list | length > 0 %}
+    {% if has_more %}
+    <div class="pagination">
+        {% set base = url_for('suggestions_from_projects') %}
+        {% if page > 1 %}
+            <a href="{{ filter_url(base, filters, page=page-1) }}" class="btn-outline">&larr; Previous</a>
+        {% endif %}
+        <span class="page-info">Page {{ page }}</span>
+        <a href="{{ filter_url(base, filters, page=page+1) }}" class="btn-outline">Next &rarr;</a>
+    </div>
+    {% endif %}
+{% else %}
+<div class="empty-state">
+    <h2>No project history found</h2>
+    <p>Complete some projects on <a href="https://www.ravelry.com" target="_blank">Ravelry</a> and come back for personalized suggestions.</p>
+</div>
+{% endif %}
+{% endblock %}

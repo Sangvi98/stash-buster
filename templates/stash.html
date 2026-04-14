@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}My Stash – Stash Buster{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>Your Yarn Stash</h1>
+    <p>You have <strong>{{ stash | length }}</strong> yarn{{ 's' if stash | length != 1 }} in your stash. Click any yarn to find patterns that will use it up!</p>
+</section>
+
+{% if stash %}
+<div class="stash-grid">
+    {% for item in stash %}
+    <div class="stash-card">
+        {% set photo = item.get('first_photo') or {} %}
+        {% if photo.get('small_url') %}
+            <img src="{{ photo['small_url'] }}" alt="{{ item.get('name', 'Yarn') }}" class="stash-photo">
+        {% else %}
+            <div class="stash-photo placeholder">No photo</div>
+        {% endif %}
+
+        <div class="stash-info">
+            <h3>{{ item.get('name', 'Unnamed Yarn') }}</h3>
+
+            {% set yarn = item.get('yarn') or {} %}
+            {% if yarn.get('yarn_company_name') %}
+                <p class="yarn-company">{{ yarn['yarn_company_name'] }}</p>
+            {% endif %}
+
+            <div class="stash-details">
+                {% set weight = (yarn.get('yarn_weight') or {}).get('name') %}
+                {% if weight %}
+                    <span class="tag">{{ weight }}</span>
+                {% endif %}
+
+                {% if item.get('color_family_name') %}
+                    <span class="tag color">{{ item['color_family_name'] }}</span>
+                {% endif %}
+
+                {% if item.get('skeins') %}
+                    <span class="detail">{{ item['skeins'] }} skein{{ 's' if item['skeins'] != 1 }}</span>
+                {% endif %}
+
+                {% if item.get('yards') %}
+                    <span class="detail">{{ item['yards'] | int }} yards</span>
+                {% endif %}
+            </div>
+
+            <a href="{{ url_for('suggestions_for_yarn', stash_id=item['id']) }}" class="btn-secondary">Find Patterns</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>Your stash is empty!</h2>
+    <p>Add some yarns to your <a href="https://www.ravelry.com/people/{{ username }}/stash" target="_blank">Ravelry stash</a> and come back to find patterns for them.</p>
+</div>
+{% endif %}
+{% endblock %}

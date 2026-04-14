@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: stash-buster
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: RAVELRY_CLIENT_ID
+        sync: false
+      - key: RAVELRY_CLIENT_SECRET
+        sync: false
+      - key: RAVELRY_ACCESS_KEY
+        sync: false
+      - key: RAVELRY_PERSONAL_KEY
+        sync: false
+      - key: REDIRECT_URI
+        sync: false
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.6

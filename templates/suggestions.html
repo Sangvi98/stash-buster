@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} – Stash Buster{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>{{ title }}</h1>
+
+    {% if stash_item %}
+        <div class="context-bar">
+            {% set yarn = stash_item.get('yarn') or {} %}
+            {% set weight = (yarn.get('yarn_weight') or {}).get('name', 'Unknown weight') %}
+            <span class="tag">{{ weight }}</span>
+            {% if stash_item.get('yards') %}
+                <span class="detail">{{ stash_item['yards'] | int }} yards available</span>
+            {% endif %}
+            {% if stash_item.get('color_family_name') %}
+                <span class="tag color">{{ stash_item['color_family_name'] }}</span>
+            {% endif %}
+            {% if profile and profile.avg_difficulty %}
+                <span class="tag difficulty">Your skill level: ~{{ "%.1f" | format(profile.avg_difficulty) }}/10</span>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <a href="{{ url_for('stash') }}" class="back-link">&larr; Back to stash</a>
+</section>
+
+{# ── Filter bar ── #}
+{% set form_action = url_for('suggestions_for_yarn', stash_id=stash_id) %}
+{% include "filters.html" %}
+
+{# ── Smart suggestions: yarn + user's favorite categories ── #}
+{% if smart_groups %}
+<section class="smart-section">
+    <h2>Based on your yarn + your favorite project types</h2>
+    <p class="section-subtitle">Patterns that match this yarn's weight and yardage, filtered to categories you love.</p>
+
+    {% for group in smart_groups %}
+    <div class="category-group">
+        <h3 class="category-heading">{{ group.category }}</h3>
+        <div class="pattern-grid">
+            {% for pattern in group.patterns %}
+            <a href="https://www.ravelry.com/patterns/library/{{ pattern.get('permalink', '') }}"
+               target="_blank" class="pattern-card">
+                {% set photo = pattern.get('first_photo') or {} %}
+                {% if photo.get('medium_url') %}
+                    <img src="{{ photo['medium_url'] }}" alt="{{ pattern.get('name', 'Pattern') }}" class="pattern-photo">
+                {% else %}
+                    <div class="pattern-photo placeholder">No photo</div>
+                {% endif %}
+                <div class="pattern-info">
+                    <h3>{{ pattern.get('name', 'Unnamed Pattern') }}</h3>
+                    {% if pattern.get('designer', {}).get('name') %}
+                        <p class="designer">by {{ pattern['designer']['name'] }}</p>
+                    {% endif %}
+                    <div class="pattern-meta">
+                        {% if pattern.get('free') %}
+                            <span class="tag free">Free</span>
+                        {% endif %}
+                        {% if pattern.get('yardage') %}
+                            <span class="detail">{{ pattern['yardage'] }} yds</span>
+                        {% endif %}
+                        {% if pattern.get('difficulty_average') %}
+                            <span class="detail">Diff: {{ "%.1f" | format(pattern['difficulty_average']) }}</span>
+                        {% endif %}
+                        {% if pattern.get('rating_average') %}
+                            <span class="detail">{{ "%.1f" | format(pattern['rating_average']) }}/5</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</section>
+{% endif %}
+
+{# ── General best-match suggestions ── #}
+<section class="general-section">
+    <h2>All matching patterns</h2>
+    <p class="section-subtitle">Top-rated patterns that fit this yarn's weight and yardage.</p>
+
+    {% if patterns %}
+    <div class="pattern-grid">
+        {% for pattern in patterns %}
+        <a href="https://www.ravelry.com/patterns/library/{{ pattern.get('permalink', '') }}"
+           target="_blank" class="pattern-card">
+            {% set photo = pattern.get('first_photo') or {} %}
+            {% if photo.get('medium_url') %}
+                <img src="{{ photo['medium_url'] }}" alt="{{ pattern.get('name', 'Pattern') }}" class="pattern-photo">
+            {% else %}
+                <div class="pattern-photo placeholder">No photo</div>
+            {% endif %}
+            <div class="pattern-info">
+                <h3>{{ pattern.get('name', 'Unnamed Pattern') }}</h3>
+                {% if pattern.get('designer', {}).get('name') %}
+                    <p class="designer">by {{ pattern['designer']['name'] }}</p>
+                {% endif %}
+                <div class="pattern-meta">
+                    {% if pattern.get('free') %}
+                        <span class="tag free">Free</span>
+                    {% endif %}
+                    {% if pattern.get('yardage') %}
+                        <span class="detail">{{ pattern['yardage'] }} yds</span>
+                    {% endif %}
+                    {% if pattern.get('difficulty_average') %}
+                        <span class="detail">Diff: {{ "%.1f" | format(pattern['difficulty_average']) }}</span>
+                    {% endif %}
+                    {% if pattern.get('rating_average') %}
+                        <span class="detail">{{ "%.1f" | format(pattern['rating_average']) }}/5</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {# Pagination #}
+    {% if paginator and paginator.get('last_page', 1) > 1 %}
+    <div class="pagination">
+        {% set base = url_for('suggestions_for_yarn', stash_id=stash_id) %}
+        {% if page > 1 %}
+            <a href="{{ filter_url(base, filters, page=page-1) }}" class="btn-outline">&larr; Previous</a>
+        {% endif %}
+        <span class="page-info">Page {{ page }} of {{ paginator.get('last_page', 1) }}</span>
+        {% if page < paginator.get('last_page', 1) %}
+            <a href="{{ filter_url(base, filters, page=page+1) }}" class="btn-outline">Next &rarr;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+        <h2>No matching patterns found</h2>
+        <p>Try checking back later as new patterns are added to Ravelry every day.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
