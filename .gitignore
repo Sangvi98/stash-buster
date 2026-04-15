@@ -4,3 +4,5 @@ __pycache__/
 venv/
 .venv/
 *.pem
+node_modules/ # ignore node_modules going forward
+node_modules/
