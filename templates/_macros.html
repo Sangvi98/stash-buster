@@ -1,0 +1,17 @@
+{# Reusable UI snippets for Stash Buster templates. #}
+
+{% macro favorite_btn(pattern) %}
+    {% set pid = pattern.get('id') %}
+    {% if pid %}
+    <button type="button"
+            class="favorite-btn"
+            data-pattern-id="{{ pid }}"
+            aria-label="Add to Ravelry favorites"
+            title="Add to your Ravelry favorites">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M12 21s-7-4.5-9.5-9.5C1 7.5 3.5 4 7 4c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3.5 0 6 3.5 4.5 7.5C19 16.5 12 21 12 21z"
+                  fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+    </button>
+    {% endif %}
+{% endmacro %}

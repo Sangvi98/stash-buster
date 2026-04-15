@@ -22,6 +22,11 @@ class RavelryClient:
         resp.raise_for_status()
         return resp.json()
 
+    def _post(self, path, data=None):
+        resp = self.session.post(f"{API_BASE}{path}", data=data)
+        resp.raise_for_status()
+        return resp.json() if resp.content else {}
+
     # ── User ────────────────────────────────────────────────────────────
 
     def current_user(self):
@@ -77,6 +82,87 @@ class RavelryClient:
                 break
             page += 1
         return items
+
+    # ── Favorites ───────────────────────────────────────────────────────
+
+    def get_favorites(self, username, page=1, page_size=100, types="pattern"):
+        """Return a page of the user's favorites, filtered by type."""
+        return self._get(
+            f"/people/{username}/favorites/list.json",
+            params={
+                "page": page,
+                "page_size": page_size,
+                "types": types,
+            },
+        )
+
+    def get_full_favorites(self, username, types="pattern"):
+        """Fetch all favorite pages and return the combined list."""
+        items = []
+        page = 1
+        while True:
+            data = self.get_favorites(username, page=page, page_size=100, types=types)
+            favs = data.get("favorites", [])
+            items.extend(favs)
+            paginator = data.get("paginator", {})
+            if page >= paginator.get("last_page", 1):
+                break
+            page += 1
+        return items
+
+    def create_favorite(self, username, favorited_type, favorited_id,
+                        tag_names=None):
+        """Add a favorite to the user's Ravelry account.
+
+        favorited_type is one of: pattern, yarn, project, designer, etc.
+        tag_names is an optional comma-separated string of tags.
+        """
+        data = {"type": favorited_type, "favorited_id": favorited_id}
+        if tag_names:
+            data["tag_names"] = tag_names
+        return self._post(
+            f"/people/{username}/favorites/create.json", data=data
+        )
+
+    @staticmethod
+    def filter_favorites_for_yarn(favorites, stash_item,
+                                   made_pattern_ids=None, limit=12):
+        """Return favorited patterns that match a yarn and haven't been made.
+
+        Matches the stash yarn by weight (if both sides report one) and keeps
+        patterns whose yardage fits within the available stash yardage.
+        Any pattern whose id is in made_pattern_ids is excluded.
+        """
+        made_pattern_ids = made_pattern_ids or set()
+        yarn = stash_item.get("yarn") or {}
+        yarn_weight = ((yarn.get("yarn_weight") or {}).get("name") or "").strip().lower()
+        total_yards = stash_item.get("yards") or 0
+
+        matching = []
+        for fav in favorites:
+            pattern = fav.get("favorited") or {}
+            if not pattern:
+                continue
+
+            pid = pattern.get("id")
+            if pid and pid in made_pattern_ids:
+                continue
+
+            # Weight check (only reject when both sides are known and differ)
+            pattern_weight = ((pattern.get("pattern_yarn_weight") or {}).get("name") or "").strip().lower()
+            if yarn_weight and pattern_weight and pattern_weight != yarn_weight:
+                continue
+
+            # Yardage check (only reject when both sides are known)
+            pattern_yardage = pattern.get("yardage_max") or pattern.get("yardage")
+            if total_yards and pattern_yardage and pattern_yardage > total_yards:
+                continue
+
+            matching.append(pattern)
+            if len(matching) >= limit:
+                break
+
+        return matching
 
     # ── Pattern search ──────────────────────────────────────────────────
 

@@ -30,5 +30,44 @@
     <footer>
         <p>Stash Buster &middot; Powered by the <a href="https://www.ravelry.com" target="_blank">Ravelry</a> API</p>
     </footer>
+
+    <script>
+    // Handle clicks on the heart button inside pattern cards.
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.favorite-btn');
+        if (!btn) return;
+
+        // Stop the parent <a> from opening Ravelry.
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (btn.disabled || btn.classList.contains('favorited')) return;
+
+        const patternId = btn.dataset.patternId;
+        if (!patternId) return;
+
+        btn.disabled = true;
+        fetch('/favorite/pattern/' + patternId, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' },
+        })
+            .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+            .then(function (data) {
+                if (data && data.ok) {
+                    btn.classList.add('favorited');
+                    btn.title = 'Added to your Ravelry favorites';
+                } else {
+                    btn.classList.add('error');
+                    btn.title = (data && data.error) || 'Could not add favorite';
+                    btn.disabled = false;
+                }
+            })
+            .catch(function () {
+                btn.classList.add('error');
+                btn.title = 'Network error';
+                btn.disabled = false;
+            });
+    });
+    </script>
 </body>
 </html>

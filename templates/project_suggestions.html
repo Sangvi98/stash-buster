@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import favorite_btn %}
 {% block title %}Project-Based Ideas – Stash Buster{% endblock %}
 
 {% block content %}
@@ -41,6 +42,7 @@
             {% for pattern in group.patterns %}
             <a href="https://www.ravelry.com/patterns/library/{{ pattern.get('permalink', '') }}"
                target="_blank" class="pattern-card">
+                {{ favorite_btn(pattern) }}
                 {% set photo = pattern.get('first_photo') or {} %}
                 {% if photo.get('medium_url') %}
                     <img src="{{ photo['medium_url'] }}" alt="{{ pattern.get('name', 'Pattern') }}" class="pattern-photo">

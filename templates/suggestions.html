@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import favorite_btn %}
 {% block title %}{{ title }} – Stash Buster{% endblock %}
 
 {% block content %}
@@ -29,6 +30,47 @@
 {% set form_action = url_for('suggestions_for_yarn', stash_id=stash_id) %}
 {% include "filters.html" %}
 
+{# ── From your favorites ── #}
+{% if favorite_matches %}
+<section class="smart-section">
+    <h2>From your favorites</h2>
+    <p class="section-subtitle">Patterns you've already favorited that fit this yarn — and haven't made yet.</p>
+    <div class="pattern-grid">
+        {% for pattern in favorite_matches %}
+        <a href="https://www.ravelry.com/patterns/library/{{ pattern.get('permalink', '') }}"
+           target="_blank" class="pattern-card">
+            {% set photo = pattern.get('first_photo') or {} %}
+            {% if photo.get('medium_url') %}
+                <img src="{{ photo['medium_url'] }}" alt="{{ pattern.get('name', 'Pattern') }}" class="pattern-photo">
+            {% else %}
+                <div class="pattern-photo placeholder">No photo</div>
+            {% endif %}
+            <div class="pattern-info">
+                <h3>{{ pattern.get('name', 'Unnamed Pattern') }}</h3>
+                {% if pattern.get('designer', {}).get('name') %}
+                    <p class="designer">by {{ pattern['designer']['name'] }}</p>
+                {% endif %}
+                <div class="pattern-meta">
+                    {% if pattern.get('free') %}
+                        <span class="tag free">Free</span>
+                    {% endif %}
+                    {% if pattern.get('yardage') %}
+                        <span class="detail">{{ pattern['yardage'] }} yds</span>
+                    {% endif %}
+                    {% if pattern.get('difficulty_average') %}
+                        <span class="detail">Diff: {{ "%.1f" | format(pattern['difficulty_average']) }}</span>
+                    {% endif %}
+                    {% if pattern.get('rating_average') %}
+                        <span class="detail">{{ "%.1f" | format(pattern['rating_average']) }}/5</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 {# ── Smart suggestions: yarn + user's favorite categories ── #}
 {% if smart_groups %}
 <section class="smart-section">
@@ -42,6 +84,7 @@
             {% for pattern in group.patterns %}
             <a href="https://www.ravelry.com/patterns/library/{{ pattern.get('permalink', '') }}"
                target="_blank" class="pattern-card">
+                {{ favorite_btn(pattern) }}
                 {% set photo = pattern.get('first_photo') or {} %}
                 {% if photo.get('medium_url') %}
                     <img src="{{ photo['medium_url'] }}" alt="{{ pattern.get('name', 'Pattern') }}" class="pattern-photo">
@@ -86,6 +129,7 @@
         {% for pattern in patterns %}
         <a href="https://www.ravelry.com/patterns/library/{{ pattern.get('permalink', '') }}"
            target="_blank" class="pattern-card">
+            {{ favorite_btn(pattern) }}
             {% set photo = pattern.get('first_photo') or {} %}
             {% if photo.get('medium_url') %}
                 <img src="{{ photo['medium_url'] }}" alt="{{ pattern.get('name', 'Pattern') }}" class="pattern-photo">

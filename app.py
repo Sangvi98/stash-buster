@@ -9,14 +9,18 @@ Authentication strategy:
 
 import os
 import secrets
+import time
 from functools import wraps
 from urllib.parse import urlencode
 
+import requests as http
 from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 from requests_oauthlib import OAuth2Session
 
 from ravelry import RavelryClient
+
+API_BASE = "https://api.ravelry.com"
 
 load_dotenv()
 
@@ -113,7 +117,7 @@ def login():
 
 @app.route("/callback")
 def callback():
-    """Handle the OAuth 2.0 redirect – extract the username."""
+    """Handle the OAuth 2.0 redirect – store token + username in session."""
     try:
         oauth = OAuth2Session(
             CLIENT_ID,
@@ -126,10 +130,8 @@ def callback():
             authorization_response=request.url,
         )
 
-        # Use the OAuth token just once to get the username, then discard it
-        import requests as req
-        resp = req.get(
-            "https://api.ravelry.com/current_user.json",
+        resp = http.get(
+            f"{API_BASE}/current_user.json",
             headers={"Authorization": f"Bearer {token['access_token']}"},
         )
         resp.raise_for_status()
@@ -138,7 +140,9 @@ def callback():
         if not username:
             return f"<h2>Login failed</h2><p>Could not get username. API response: {resp.json()}</p>", 500
 
+        # Keep the token so we can make writes on behalf of this user
         session["username"] = username
+        session["oauth_token"] = token
         return redirect(url_for("stash"))
 
     except Exception as e:
@@ -189,8 +193,25 @@ def suggestions_for_yarn(stash_id):
     stash_data = client.get_stash_item(username, stash_id)
     stash_item = stash_data.get("stash", {})
 
-    # Build user preference profile
-    _projects, profile = get_profile(client, username)
+    # Build user preference profile from project history
+    projects = client.get_full_projects(username)
+    profile = client.analyze_project_history(projects)
+
+    # Collect the set of pattern ids the user has already made so we can
+    # exclude them from favorite-based suggestions.
+    made_pattern_ids = {
+        proj.get("pattern_id") for proj in projects if proj.get("pattern_id")
+    }
+
+    # Favorites that match this yarn, excluding already-made patterns
+    favorite_matches = []
+    try:
+        favorites = client.get_full_favorites(username, types="pattern")
+        favorite_matches = client.filter_favorites_for_yarn(
+            favorites, stash_item, made_pattern_ids=made_pattern_ids, limit=12
+        )
+    except Exception:
+        favorite_matches = []
 
     # General suggestions for this yarn
     results = client.suggest_patterns_for_stash_item(
@@ -209,6 +230,7 @@ def suggestions_for_yarn(stash_id):
         patterns=patterns,
         paginator=paginator,
         smart_groups=smart_groups,
+        favorite_matches=favorite_matches,
         profile=profile,
         filters=filters,
         title=f"Patterns for: {stash_item.get('name', 'your yarn')}",
@@ -240,6 +262,60 @@ def suggestions_from_projects():
         filters=filters,
         page=page,
     )
+
+
+# ── Favorites API (user-scoped via OAuth) ───────────────────────────────
+
+def _current_oauth_token():
+    """Return the session's OAuth token, refreshing it if it's expired."""
+    token = session.get("oauth_token")
+    if not token:
+        return None
+
+    expires_at = token.get("expires_at", 0)
+    if expires_at and expires_at < time.time() + 30:
+        refresh_token = token.get("refresh_token")
+        if not refresh_token:
+            return None
+        oauth = OAuth2Session(CLIENT_ID)
+        new_token = oauth.refresh_token(
+            TOKEN_URL,
+            refresh_token=refresh_token,
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+        )
+        session["oauth_token"] = new_token
+        return new_token
+
+    return token
+
+
+@app.route("/favorite/pattern/<int:pattern_id>", methods=["POST"])
+@login_required
+def favorite_pattern(pattern_id):
+    """Add a pattern to the logged-in user's Ravelry favorites.
+
+    Uses the user's OAuth access token so the favorite lands on the account
+    that is currently signed in (not the app-key owner's account).
+    """
+    token = _current_oauth_token()
+    if not token:
+        return jsonify({"ok": False, "error": "Please log in again."}), 401
+
+    username = session["username"]
+    try:
+        resp = http.post(
+            f"{API_BASE}/people/{username}/favorites/create.json",
+            headers={"Authorization": f"Bearer {token['access_token']}"},
+            data={"type": "pattern", "favorited_id": pattern_id},
+        )
+        resp.raise_for_status()
+        return jsonify({"ok": True})
+    except http.HTTPError as e:
+        body = getattr(e.response, "text", "")[:200]
+        return jsonify({"ok": False, "error": f"{e}: {body}"}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
 
 
 # ── Run ─────────────────────────────────────────────────────────────────
